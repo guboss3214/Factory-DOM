@@ -65,20 +65,21 @@ async function fetchData(page) {
     }
 }
 
+const list = document.getElementById('characters-list')
+
 async function renderPage(page) {
     const loadingEl = document.getElementById('loading')
     try {
-        loadingEl.style.display = 'block'
+        loadingEl.style.display = 'flex'
         const data = await fetchData(page)
         if (!data) return
 
         const characters = data.results
 
-        const list = document.getElementById('characters-list')
         list.innerHTML = ''
 
         characters.forEach((char) => {
-            const statusColor =
+            const statusClass =
                 char.status === 'Alive'
                     ? '#27ae60'
                     : char.status === 'Dead'
@@ -86,22 +87,26 @@ async function renderPage(page) {
                     : '#95a5a6'
 
             const card = document.createElement('div')
-            card.className = 'main-character'
+            card.className = 'col-12'
             card.innerHTML = `
-            <div class="info">
-                    <img src="${char.image}" alt="Icon" id="image" />
-                    <div>
-                        <div class="info_name">
-                            <h2>Name:</h2>
-                            <span id="name">${char.name}</span>
+                <div class="character-card" data-id="${char.id}">
+                    <div class="character-img-wrapper">
+                        <img src="${char.image}" alt="${char.name}" class="character-img" loading="lazy">
+                    </div>
+                    <div class="character-info">
+                        <h2 class="char-name">${char.name}</h2>
+                        <div>
+                            <span class="status-badge" style="color: ${statusClass}">
+                                <i class="fas fa-circle me-2" style="font-size: 8px;"></i>
+                                ${char.status}
+                            </span>
                         </div>
-                        <div class="info_status">
-                            <h2>Status:</h2>
-                            <span id="status" style='color: ${statusColor}'>${char.status}</span>
+                        <div class="mt-3">
+                            <p class="mb-1 text-muted small uppercase fw-bold" style="letter-spacing: 1px;">Species</p>
+                            <p class="mb-0 text-dark">${char.species}</p>
                         </div>
                     </div>
                 </div>
-                <hr>
         `
             list.appendChild(card)
         })
@@ -115,6 +120,51 @@ async function renderPage(page) {
         loadingEl.style.display = 'none'
     }
 }
+
+const charModal = new bootstrap.Modal(document.getElementById('characterModal'))
+const modalBody = document.getElementById('modal-body-content')
+
+list.addEventListener('click', async (e) => {
+    const card = e.target.closest('.character-card')
+    if (!card) return
+
+    const charId = card.getAttribute('data-id')
+
+    modalBody.innerHTML =
+        '<div class="spinner-border text-primary" role="status"></div>'
+    charModal.show()
+
+    try {
+        const response = await fetch(
+            `https://rickandmortyapi.com/api/character/${charId}`
+        )
+        const char = await response.json()
+
+        modalBody.innerHTML = `
+            <img src="${char.image}" class="rounded-circle mb-3 shadow" style="width: 150px;">
+            <h2 class="fw-bold mb-1">${char.name}</h2>
+            <p class="text-muted mb-4">${char.species} — ${char.gender}</p>
+            
+            <div class="row g-3 text-start">
+                <div class="col-6">
+                    <small class="text-muted d-block">Status</small>
+                    <span class="fw-bold">${char.status}</span>
+                </div>
+                <div class="col-6">
+                    <small class="text-muted d-block">Origin</small>
+                    <span class="fw-bold">${char.origin.name}</span>
+                </div>
+                <div class="col-12">
+                    <small class="text-muted d-block">Last known location</small>
+                    <span class="fw-bold">${char.location.name}</span>
+                </div>
+            </div>
+        `
+    } catch (error) {
+        modalBody.innerHTML =
+            '<p class="text-danger">Failed to load data...</p>'
+    }
+})
 
 const prevBtn = document.getElementById('prev-btn')
 prevBtn.addEventListener('click', () => {
